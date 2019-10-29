@@ -1,0 +1,122 @@
+function[iter, FX, x]=nr(F, J, x)
+
+%[count, Fx, x]=nr(F, J, x)
+%MATLAB M-file to implement the Newton-Raphson Method 
+%on a system of equations.
+ 
+%Inputs:
+%F = the vector funtion to be solved
+%J = the Jacobian Matrix of the vector function F
+%x = the initial values for the unknowns
+ 
+%Outputs:
+%iter = the number of iterations the Newton-Raphson 
+%Fx = the vector function evaluated at the calculated
+%value for x
+%x = a vector containing the new values for x
+%Version 1.4: 
+%Author: Eoin Durnin
+ 
+ 
+%constants
+Iteration_limit=1000; 
+tolerance=1*10^-8;
+backoff=0.1;
+FX=F(x); %F evaluated at initial x
+JX=J(x); %Jacobian evaluated at estimate of x
+ 
+%Newton-Raphson algorithm
+for iter= 1:(Iteration_limit + 1);
+        if iter==Iteration_limit + 1
+            error('Iteration limit reached without convergence')
+        break
+        end
+
+
+       Jinvrse=inv(JX); %inverse of Jacobian matrix
+        x = x - backoff*(Jinvrse*FX); 
+        if norm(FX)<tolerance %check within tolerance
+        break
+        end
+       FX=F(x); %Update F
+       JX=J(x); %Update J
+   
+    
+    End
+
+
+Calling the function using the I initial values from the push pull amplifier circuit 
+
+
+%constants
+R1=1000;  
+R2 = 100000;     
+Rout=25;        
+k=1.3806503e-23;    %Boltzmann's constant  (units: m^2 kg s^-2 K^-1)
+q=1.60217646e-19;   %charge of an electron(units: C)
+T=298;              %Temperature (Kelvin)
+Isd= 10e-12;        
+Is = 0.85e-12;      
+Aq = q/(k*T);       %1/Vt(the thermal voltage) 
+C = Aq;
+ 
+%initial values
+IB1 = 2.7e-3;    %base current initial values
+IB2 = 3.9e-3;
+IB3 = 35e-6 ; 
+ID3 = 2.2e-3;    %combination of diodes
+IR2=IB3;
+IR=IB1+ID3;
+betaf1 = 44;    %from chracteristic graphs
+betaf2 = 29.5;
+betaf3 = 44;
+VA = 120;
+IC1 = ((-betaf1*IB1*(V1-9)))/VA+(betaf1*IB1);
+IC2 = IB1 + IC1 -IR2 -IB2;
+IC3 = ID3 - IB2;
+ 
+%initial node voltages
+V1 = 3.9775;
+V2 = 3.5;
+V4 = -0.225;
+V3 = 3.2775;
+ 
+ 
+%initialising vector x with initial estimates
+ 
+ 
+x = [V1 V2 V3 V4 IB1 IB2 IB3 IC1 IC2 IC3 ID3 IR2 IR]';
+
+%function vector 
+F = @(x) [  x(5)+x(11)-x(13);
+            x(11)-x(6)-x(10);
+            x(12)-x(5)-x(8)+x(9)+x(6);
+            x(7)-x(12);
+            x(1)-9+(1025*x(13));
+            x(3)-x(4)-(R2*x(12));
+            (Isd*exp(Aq*(x(1)-x(2)))-x(11)-Isd);
+            ((Is/betaf1)*(exp(C*(x(1)-x(3)))))-x(5)-(Is/betaf1);
+            (((betaf1*x(5))*(x(1)-9))/VA)-(betaf1*x(5))+x(8);
+            ((Is/betaf2)*(exp(C*(x(3) - x(2)))))-x(6)-(Is/betaf2);
+            (((betaf2)*(x(6))*-(x(2)))/VA)-(betaf2*x(6))+x(9);
+            (((Is)/betaf3)*(exp(C*x(4))))-x(7)-(Is/betaf3);
+            ((betaf3*x(7))/VA)*(x(4)-x(2))-(betaf3*x(7))+x(10)];
+
+
+%jacobian matrix
+J = @(x) [ 0 0 0 0 1 0 0 0 0 0 1 0 -1;
+           0 0 0 0 0 -1 0 0 0 -1 1 0 0;
+           0 0 0 0 -1 1 0 -1 1 0 0 1 0;
+           0 0 0 0 0 0 1 0 0 0 0 -1 0;
+           1 0 0 0 0 0 0 0 0 0 0 0 1025;
+           0 0 1 -1 0 0 0 0 0 0 0 -R2 0;
+           (Aq*Isd*exp(Aq*(x(1)-x(2)))) (-Aq*Isd*exp(Aq*(x(1)-x(2)))) 0 0 0 0 0 0 0 0 -1 0 0;
+           (((C*Is)/betaf1)*(exp(C*(x(1)-x(3))))) 0 (((-C*Is)/betaf1)*(exp(C*(x(1)-x(3))))) 0 -1 0 0 0 0 0 0 0 0;
+           ((betaf1*x(5))/VA) 0 0 0 (((betaf1*(x(1)-9))/VA)-betaf1) 0 0 1 0 0 0 0 0;
+           0 (((-C*Is)/betaf2)*(exp(C*(x(3)-x(2))))) (((C*Is)/betaf2)*(exp(C*(x(3)-x(2))))) 0 0 -1 0 0 0 0 0 0 0;
+           0 ((-betaf2*x(6))/VA) 0 0 0 (((betaf2)*-(x(2)))/(VA))-betaf2 0 0 1 0 0 0 0;
+           0 0 0 (((C*Is)/betaf3)*(exp(C*x(4)))) 0 0 -1 0 0 0 0 0 0;
+           0 ((-betaf3*x(7))/VA) 0 ((betaf3*x(7))/VA) 0 0 (((betaf3/VA)*(x(4)-x(2)))-betaf3) 0 0 1 0 0 0];
+       
+%calling function    
+[iter, Fx, x]=nr (F, J, x);
